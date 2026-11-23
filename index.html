@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,user-scalable=no">
+<title>Break The House 3D</title>
+  <link rel="manifest" href="manifest.json">
+<>">
+<>">
+
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:#09090b;color:#fff;font-family:sans-serif;overflow:hidden;touch-action:none}
+#ui{position:fixed;top:0;width:100%;display:flex;justify-content:space-between;padding:12px 16px;background:rgba(0,0,0,.75);font-weight:bold;z-index:9}
+#pz{position:fixed;bottom:0;width:100%;height:24vh;background:linear-gradient(to top,rgba(34,197,94,.22),transparent);border-top:1px dashed #4ade8066;display:flex;align-items:center;justify-content:center;color:#ffffff88;font-size:13px;z-index:8}
+#scr{position:fixed;inset:0;background:radial-gradient(circle at center,#1e1b4b,#09090b 80%);display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:20px;z-index:50}
+#lb{position:absolute;top:16px;right:16px;padding:10px 18px;background:#ffffff22;border:1px solid #ffffff55;border-radius:10px;font-weight:bold;z-index:60}
+#btn{background:#22c55e;color:#052e16;padding:18px 54px;font-size:22px;font-weight:900;border-radius:14px;margin-top:20px;box-shadow:0 0 25px #22c55e66}
+#adbtn{background:#f59e0b;color:#271001;padding:14px 36px;font-size:18px;font-weight:900;border-radius:14px;margin-top:14px;box-shadow:0 0 20px #f59e0b66;display:none;z-index:60}
+canvas{display:block;width:100vw;height:100vh}
+</style>
+</head>
+<body>
+<div id="ui"><span id="r">1. Piwnica</span><span id="sc">0 pkt</span><span id="l">Życia: 4</span></div>
+<div id="pz">PRZESUWAJ PALCEM TUTAJ</div>
+<div id="scr" onclick="go()" ontouchstart="go()">
+  <div id="lb" onclick="tgl()" ontouchstart="tgl()">PL</div>
+  <h1 id="st" style="color:#facc15;font-size:34px;text-shadow:0 2px 12px #facc1555">PRZEBIJ DOM</h1>
+  <p id="sd" style="color:#cbd5e1;margin-top:8px;max-width:280px">Zbij sufit i idź wyżej! Czerwony: +1 życie, Niebieski: 2 piłki.</p>
+  <div id="btn">GRAJ</div>
+  <div id="adbtn" onclick="revive()" ontouchstart="revive()">+2 ŻYCIA (REKLAMA)</div>
+</div>
+<canvas id="c"></canvas>
+<script>
+const c=document.getElementById("c"),ctx=c.getContext("2d"),rEl=document.getElementById("r"),lEl=document.getElementById("l"),scEl=document.getElementById("sc"),pz=document.getElementById("pz"),scr=document.getElementById("scr"),adbtn=document.getElementById("adbtn"),lb=document.getElementById("lb");
+let RW=340,RH=460,CZ=400,FOV=380;
+const res=()=>{c.width=innerWidth;c.height=innerHeight;RW=Math.min(440,c.width*.88);RH=Math.min(600,c.height*.62);FOV=RW*1.08};addEventListener("resize",res);res();
+let ac=null,run=0,lv=0,lives=4,score=0,tiles=[],balls=[],bon=[],pad={x:0,y:0,hs:42},en=0,blk=0;
+const cols=["#f43f5e","#f97316","#eab308","#22c55e","#06b6d4","#3b82f6","#a855f7"];
+const lvls=[
+  {n:"1. Piwnica",w1:"#292524",w2:"#141210",line:"#57534e",s:4.8,m:0,hp:1},
+  {n:"2. Kotłownia",w1:"#451a03",w2:"#1c0a00",line:"#9a3412",s:5.5,m:1,hp:1},
+  {n:"3. Garaż",w1:"#1e293b",w2:"#090d16",line:"#334155",s:6.3,m:2,hp:1},
+  {n:"4. Korytarz",w1:"#14532d",w2:"#052e16",line:"#15803d",s:7.1,m:3,hp:1},
+  {n:"5. Kuchnia",w1:"#701a75",w2:"#2e0632",line:"#a21caf",s:7.9,m:0,hp:2},
+  {n:"6. Salon",w1:"#3b0764",w2:"#130424",line:"#7e22ce",s:8.7,m:1,hp:2},
+  {n:"7. Sypialnia",w1:"#1e1b4b",w2:"#090821",line:"#4338ca",s:9.5,m:2,hp:2},
+  {n:"8. Strych",w1:"#7c2d12",w2:"#2b0d04",line:"#c2410c",s:10.3,m:3,hp:2},
+  {n:"9. Dach",w1:"#0c4a6e",w2:"#041c2c",line:"#0369a1",s:11.1,m:0,hp:3},
+  {n:"10. Kosmos",w1:"#09090b",w2:"#000000",line:"#52525b",s:12.0,m:2,hp:3}
+];
+function tgl(){
+  blk=Date.now();en=en?0:1;lb.textContent=en?"EN":"PL";
+  pz.textContent=en?"SLIDE HERE":"PRZESUWAJ PALCEM TUTAJ";
+  document.getElementById("st").textContent=en?"BREAK THE HOUSE":"PRZEBIJ DOM";
+  document.getElementById("sd").textContent=en?"Smash the ceiling! Red: +1 life, Blue: 2 balls.":"Zbij sufit i idź wyżej! Czerwony: +1 życie, Niebieski: 2 piłki.";
+  document.getElementById("btn").textContent=en?"PLAY":"GRAJ";
+  adbtn.textContent=en?"+2 LIVES (AD)":"+2 ŻYCIA (REKLAMA)";
+  rEl.textContent=en?"Floor "+(lv+1):lvls.at(lv).n;
+  lEl.textContent=(en?"Lives: ":"Życia: ")+lives;
+}
+const prj=(x,y,z)=>{const k=FOV/(FOV+z);return{x:c.width/2+x*k,y:c.height*.41+y*k,k}};
+function snd(f,d=.1,tp="triangle"){try{if(!ac)ac=new(window.AudioContext||window.webkitAudioContext)();if(ac.state==="suspended")ac.resume();const t=ac.currentTime,o=ac.createOscillator(),g=ac.createGain();o.type=tp;o.frequency.setValueAtTime(f,t);o.frequency.exponentialRampToValueAtTime(f*.4,t+d);g.gain.setValueAtTime(.25,t);g.gain.exponentialRampToValueAtTime(.01,t+d);o.connect(g);g.connect(ac.destination);o.start(t);o.stop(t+d)}catch(e){}}
+function init(i){
+  const L=lvls.at(i);rEl.textContent=en?"Floor "+(i+1):L.n;lEl.textContent=(en?"Lives: ":"Życia: ")+lives;scEl.textContent=score+" pkt";tiles=[];bon=[];
+  const g=8,tw=(RW-g*6)/5,th=(RH-g*6)/5;
+  for(let r=0;r<5;r++)for(let col=0;col<5;col++){
+    if(L.m===0&&Math.abs(r-2)>1&&Math.abs(col-2)>1)continue;
+    if(L.m===1&&r>0&&r<4&&col>0&&col<4)continue;
+    if(L.m===2&&(r+col)%2)continue;
+    if(L.m===3&&Math.abs(r-2)+Math.abs(col-2)>2)continue;
+    const h=((r+col)%3===0)?L.hp:1;
+    tiles.push({x:-RW/2+g+tw/2+col*(tw+g),y:-RH/2+g+th/2+r*(th+g),w:tw*((r+col)%3?.85:1),h:th,c:cols.at((r*3+col+i)%7),hp:h});
+  }
+  balls=[{x:0,y:0,z:20,vx:L.s*.4,vy:-L.s*.4,vz:L.s,r:16}];
+}
+function go(){if(run||Date.now()-blk<400)return;snd(350);lv=0;lives=4;score=0;init(0);scr.style.display="none";adbtn.style.display="none";run=1}
+function revive(){blk=Date.now();if(run)return;snd(600,.2,"sine");lives=2;const L=lvls.at(lv);lEl.textContent=(en?"Lives: ":"Życia: ")+lives;balls=[{x:0,y:0,z:20,vx:L.s*.4,vy:-L.s*.4,vz:L.s,r:16}];scr.style.display="none";adbtn.style.display="none";run=1}
+function over(w){run=0;document.getElementById("st").textContent=w?(en?"YOU WIN!":"WYGRANA!"):(en?"GAME OVER":"KONIEC GRY");document.getElementById("sd").textContent=(en?"Score: ":"Zdobyłeś: ")+score+" pkt";document.getElementById("btn").textContent=en?"PLAY AGAIN":"JESZCZE RAZ";adbtn.textContent=en?"+2 LIVES (AD)":"+2 ŻYCIA (REKLAMA)";adbtn.style.display=w?"none":"block";scr.style.display="flex"}
+function mv(x,y){const rc=pz.getBoundingClientRect();pad.x=Math.max(-RW/2+pad.hs,Math.min(RW/2-pad.hs,((x-rc.left)/rc.width*2-1)*(RW/2)));pad.y=Math.max(-RH/2+pad.hs,Math.min(RH/2-pad.hs,((y-rc.top)/rc.height*2-1)*(RH/2)))}
+addEventListener("touchstart",e=>{if(run&&e.touches.item(0))mv(e.touches.item(0).clientX,e.touches.item(0).clientY)},{passive:false});
+addEventListener("touchmove",e=>{if(run&&e.touches.item(0)){e.preventDefault();mv(e.touches.item(0).clientX,e.touches.item(0).clientY)}},{passive:false});
+addEventListener("mousemove",e=>{if(run)mv(e.clientX,e.clientY)});
+function loop(){
+  requestAnimationFrame(loop);const L=lvls.at(lv),s=L.s,hw=RW/2,hh=RH/2,hs=pad.hs;
+  if(run){
+    for(let i=balls.length-1;i>=0;i--){
+      const b=balls.at(i),pz=b.z;b.x+=b.vx;b.y+=b.vy;b.z+=b.vz;
+      if(Math.abs(b.x)+b.r>hw){b.x=Math.sign(b.x)*(hw-b.r);b.vx=-b.vx}
+      if(Math.abs(b.y)+b.r>hh){b.y=Math.sign(b.y)*(hh-b.r);b.vy=-b.vy}
+      if(b.z>=CZ-b.r){b.z=CZ-b.r;b.vz=-s;tiles.forEach(t=>{if(t.hp>0&&Math.abs(b.x-t.x)<=t.w/2+16&&Math.abs(b.y-t.y)<=t.h/2+16){t.hp--;score+=10*(lv+1);scEl.textContent=score+" pkt";snd(150+lv*120,.14,lv%2?"square":"triangle");if(t.hp<=0&&Math.random()<.35)bon.push({x:t.x,y:t.y,z:CZ,t:Math.random()>.5})}})}
+      if(b.vz<0&&pz>=0&&b.z<=0&&Math.abs(b.x-pad.x)<=hs+12&&Math.abs(b.y-pad.y)<=hs+12){b.z=1;b.vz=s;b.vx=(b.x-pad.x)/hs*s*.65;b.vy=(b.y-pad.y)/hs*s*.65;snd(300,.08)}
+      if(b.z<-80)balls.splice(i,1);
+    }
+    if(!balls.length){snd(160,.25,"sawtooth");lives--;lEl.textContent=(en?"Lives: ":"Życia: ")+lives;if(lives<=0){over(0);return}balls=[{x:0,y:0,z:20,vx:s*.4,vy:-s*.4,vz:s,r:16}]}
+    for(let i=bon.length-1;i>=0;i--){
+      const bn=bon.at(i),pz=bn.z;bn.z-=3.5;
+      if(pz>=-16&&bn.z<=16&&Math.abs(bn.x-pad.x)<=hs+18&&Math.abs(bn.y-pad.y)<=hs+18){snd(700,.15,"sine");score+=50;scEl.textContent=score+" pkt";if(bn.t){lives++;lEl.textContent=(en?"Lives: ":"Życia: ")+lives}else if(balls.length){const f=balls.at(0);balls.push({x:f.x,y:f.y,z:f.z,vx:-f.vx,vy:-f.vy,vz:s,r:16})}bon.splice(i,1);continue}
+      if(bn.z<-80)bon.splice(i,1);
+    }
+    if(!tiles.some(t=>t.hp>0)){snd(600,.3);score+=200;lv++;if(lv>=10){over(1);return}init(lv)}
+  }
+  const bg=ctx.createRadialGradient(c.width/2,c.height*.41,30,c.width/2,c.height*.41,c.height*.7);
+  bg.addColorStop(0,L.w1);bg.addColorStop(1,"#050507");ctx.fillStyle=bg;ctx.fillRect(0,0,c.width,c.height);
+  const f1=prj(-hw,-hh,0),f2=prj(hw,-hh,0),f3=prj(hw,hh,0),f4=prj(-hw,hh,0),c1=prj(-hw,-hh,CZ),c2=prj(hw,-hh,CZ),c3=prj(hw,hh,CZ),c4=prj(-hw,hh,CZ);
+  ctx.fillStyle=L.w2;ctx.fillRect(c1.x,c1.y,c2.x-c1.x,c3.y-c2.y);
+  ctx.strokeStyle=L.line;ctx.lineWidth=1.5;
+  [80,160,240,320,CZ].forEach(z=>{const p1=prj(-hw,-hh,z),p2=prj(hw,hh,z);ctx.strokeRect(p1.x,p1.y,p2.x-p1.x,p2.y-p1.y)});
+  ctx.beginPath();ctx.moveTo(f1.x,f1.y);ctx.lineTo(c1.x,c1.y);ctx.moveTo(f2.x,f2.y);ctx.lineTo(c2.x,c2.y);ctx.moveTo(f3.x,f3.y);ctx.lineTo(c3.x,c3.y);ctx.moveTo(f4.x,f4.y);ctx.lineTo(c4.x,c4.y);ctx.stroke();
+  tiles.forEach(t=>{if(t.hp<=0)return;const p1=prj(t.x-t.w/2,t.y-t.h/2,CZ-16),p2=prj(t.x+t.w/2,t.y+t.h/2,CZ-16);ctx.fillStyle=t.c;ctx.fillRect(p1.x,p1.y,p2.x-p1.x,p2.y-p1.y);ctx.strokeStyle=t.hp>1?"#fff":"#000a";ctx.lineWidth=t.hp>1?2.5:1;ctx.strokeRect(p1.x,p1.y,p2.x-p1.x,p2.y-p1.y)});
+  bon.forEach(bn=>{const p=prj(bn.x,bn.y,bn.z);ctx.beginPath();ctx.arc(p.x,p.y,14*p.k,0,7);ctx.fillStyle=bn.t?"#ef4444":"#38bdf8";ctx.fill();ctx.strokeStyle="#fff";ctx.stroke()});
+  balls.forEach(b=>{const sh=prj(b.x,b.y,0),p=prj(b.x,b.y,b.z);ctx.beginPath();ctx.arc(sh.x,sh.y,11,0,7);ctx.strokeStyle="#facc15aa";ctx.stroke();ctx.beginPath();ctx.arc(p.x,p.y,Math.max(5,b.r*p.k),0,7);ctx.fillStyle="#facc15";ctx.fill()});
+  const d1=prj(pad.x-hs,pad.y-hs,0),d2=prj(pad.x+hs,pad.y+hs,0),pm=prj(pad.x,pad.y,0);
+  ctx.fillStyle="#22c55e44";ctx.fillRect(d1.x,d1.y,d2.x-d1.x,d2.y-d1.y);ctx.strokeStyle="#4ade80";ctx.lineWidth=2;ctx.strokeRect(d1.x,d1.y,d2.x-d1.x,d2.y-d1.y);
+  ctx.beginPath();ctx.arc(pm.x,pm.y,4,0,7);ctx.fillStyle="#86efac";ctx.fill();ctx.strokeStyle="#a1a1aa";ctx.strokeRect(f1.x,f1.y,f2.x-f1.x,f3.y-f2.y);
+}
+init(0);loop();
+</script>
+</body>
+</html>
